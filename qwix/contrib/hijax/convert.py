@@ -15,8 +15,6 @@
 
 """Conversion functions for HiQArray."""
 
-# pyrefly: ignore-errors
-
 import functools
 
 import jax
@@ -26,7 +24,7 @@ import numpy as np
 import qwix.contrib.hijax.hiqarray as hq
 
 
-class AsHiQArray(hjx.VJPHiPrimitive):
+class AsHiQArray(hjx.HiPrim):
   """Hijax primitive for packing inputs into a HiQArray."""
 
   def __init__(
@@ -41,7 +39,7 @@ class AsHiQArray(hjx.VJPHiPrimitive):
     self.params = dict()
     super().__init__()
 
-  def expand(self, data, scale, zero_point):
+  def expand(self, data, scale, zero_point):  # pyrefly: ignore [bad-override]
     return hq.HiQArray(data, scale, zero_point)
 
 
@@ -59,7 +57,7 @@ def as_hiqarray(
   return to_qarray_instance(data, scale, zero_point)
 
 
-class ToHiQArray(hjx.VJPHiPrimitive):
+class ToHiQArray(hjx.HiPrim):
   """Hijax primitive for quantizing inputs to a HiQArray."""
 
   def __init__(
@@ -76,7 +74,7 @@ class ToHiQArray(hjx.VJPHiPrimitive):
 
     out_qvalue_ty = qvalue_ty.update(dtype=quantize_kwargs["qtype"])
     self.out_aval = hq.HiQArrayTy(out_qvalue_ty, scale_ty, zero_point_ty)
-    self.params = dict(
+    self.params = dict(  # pyrefly: ignore [bad-assignment]
         quantize_fn=quantize_fn,
         quantize_kwargs=quantize_kwargs,
     )
@@ -85,7 +83,7 @@ class ToHiQArray(hjx.VJPHiPrimitive):
     self.quantize_kwargs = quantize_kwargs
     super().__init__()
 
-  def expand(self, data, scale, zero_point):
+  def expand(self, data, scale, zero_point):  # pyrefly: ignore [bad-override]
     # assert False, f"{self.quantize_kwargs}"
     quantized_data = self.quantize_fn(
         data, scale, zero_point, **self.quantize_kwargs
@@ -93,7 +91,7 @@ class ToHiQArray(hjx.VJPHiPrimitive):
     return hq.HiQArray(quantized_data, scale, zero_point)
 
   # Reverse mode ad
-  def vjp_fwd(
+  def vjp_fwd(  # pyrefly: ignore [bad-override]
       self, nzs_in, data: jax.Array, scale: jax.Array, zero_point: jax.Array
   ):
     return self(data, scale, zero_point), None
@@ -122,7 +120,7 @@ def to_hiqarray(
   return to_qarray_instance(data, scale, zero_point)
 
 
-class FromHiQArray(hjx.VJPHiPrimitive):
+class FromHiQArray(hjx.HiPrim):
   """Hijax primitive for dequantizing a HiQArray."""
 
   def __init__(
@@ -130,20 +128,20 @@ class FromHiQArray(hjx.VJPHiPrimitive):
   ):
     self.in_avals = (in_aval,)
     self.out_aval = in_aval.qvalue_ty.update(dtype=in_aval.dtype)
-    self.params = dict(dequantize_fn=dequantize_fn, **dequantize_kwargs)
+    self.params = dict(dequantize_fn=dequantize_fn, **dequantize_kwargs)  # pyrefly: ignore [bad-assignment]
     # For type checking
     self.dequantize_fn = dequantize_fn
     self.dequantize_kwargs = dequantize_kwargs
     super().__init__()
 
-  def expand(self, qarray: hq.HiQArray):
+  def expand(self, qarray: hq.HiQArray):  # pyrefly: ignore [bad-override]
     dequantized_data = self.dequantize_fn(
         qarray.qvalue, qarray.scale, qarray.zero_point, **self.dequantize_kwargs
     )
     return dequantized_data
 
   # Reverse mode ad
-  def vjp_fwd(self, nzs_in, qarray: hq.HiQArray):
+  def vjp_fwd(self, nzs_in, qarray: hq.HiQArray):  # pyrefly: ignore [bad-override]
     return self(qarray), None
 
   def vjp_bwd_retval(self, res, g, /):
@@ -161,7 +159,7 @@ def from_hiqarray(
   return from_qarray_instance(qarray)
 
 
-class PermuteDims(hjx.VJPHiPrimitive):
+class PermuteDims(hjx.HiPrim):
   """Hijax primitive for permuting dimensions of a HiQArray."""
 
   def __init__(
@@ -192,7 +190,7 @@ class PermuteDims(hjx.VJPHiPrimitive):
     lo_avals_permuted = jax.tree_util.tree_map(fn, in_aval.lo_ty())
     return hq.HiQArrayTy.raise_ty(lo_avals_permuted)
 
-  def expand(self, qarray: hq.HiQArray):
+  def expand(self, qarray: hq.HiQArray):  # pyrefly: ignore [bad-override]
     return hq.HiQArray(
         jnp.permute_dims(qarray.qvalue, self.axes),
         jnp.permute_dims(qarray.scale, self.axes),
@@ -204,7 +202,7 @@ class PermuteDims(hjx.VJPHiPrimitive):
     )
 
   # Reverse mode ad
-  def vjp_fwd(self, nzs_in, qarray: hq.HiQArray):
+  def vjp_fwd(self, nzs_in, qarray: hq.HiQArray):  # pyrefly: ignore [bad-override]
     return permute_dims(qarray, self.axes), None
 
   def vjp_bwd_retval(self, res, g, /):
@@ -223,5 +221,5 @@ def transpose(qarray: hq.HiQArray) -> hq.HiQArray:
     raise ValueError(f"Called transpose on HiQArray of shape {qarray.shape}")
 
   s = list(range(qarray.ndim))
-  new_s = s[:-2] + [s[-1], s[-2]]
+  new_s = tuple(s[:-2] + [s[-1], s[-2]])
   return permute_dims(qarray, new_s)

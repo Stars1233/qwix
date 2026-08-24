@@ -13,8 +13,6 @@
 # limitations under the License.
 """Matmul operations."""
 
-# pyrefly: ignore-errors
-
 import dataclasses
 import enum
 import typing
@@ -125,7 +123,7 @@ class _WhichOp(enum.Enum):
   DRHS = "drhs"
 
 
-class Matmul(hjx.VJPHiPrimitive):
+class Matmul(hjx.HiPrim):
   """Hijax matmul primitive for HiQArray.
 
   This class implements the hijax primitive for a matmul operation. It supports
@@ -174,7 +172,9 @@ class Matmul(hjx.VJPHiPrimitive):
     self._which_op = _WhichOp.FWD
     super().__init__()
 
-  def expand(self, lhs: hq.HiQArray, rhs: hq.HiQArray):
+  def expand(  # pyrefly: ignore [bad-override]
+      self, lhs: hq.HiQArray, rhs: hq.HiQArray
+  ):
     # Select the config based on the current op path
     if self._which_op == _WhichOp.FWD:
       config = self.config.fwd_config
@@ -196,7 +196,7 @@ class Matmul(hjx.VJPHiPrimitive):
     return op(
         lhs.qvalue,
         lhs.scale,
-        lhs.zero_point,
+        lhs.zero_point,  # pyrefly: ignore [bad-argument-count]
         rhs.qvalue,
         rhs.scale,
         rhs.zero_point,
@@ -204,7 +204,9 @@ class Matmul(hjx.VJPHiPrimitive):
     )
 
   # Reverse mode ad
-  def vjp_fwd(self, nzs_in, lhs: hq.HiQArray, rhs: hq.HiQArray):
+  def vjp_fwd(  # pyrefly: ignore [bad-override]
+      self, nzs_in, lhs: hq.HiQArray, rhs: hq.HiQArray
+  ):
     return self(lhs, rhs), (lhs, rhs)
 
   def vjp_bwd_retval(self, res, g, /):
@@ -226,7 +228,9 @@ class Matmul(hjx.VJPHiPrimitive):
           **dataclasses.asdict(dlhs_mode),
       )
       # Compute dlhs
-      dlhs = self.config.dlhs_config.op(g, y, **self.config.dlhs_config.kwargs)
+      dlhs = self.config.dlhs_config.op(
+          g, y, **self.config.dlhs_config.kwargs  # pyrefly: ignore [bad-argument-count]
+      )
     else:
       # Compute or fetch scale and zero point
       if isinstance(dlhs_mode, BwdStaticQuantizeMatmulConfig):
@@ -266,7 +270,7 @@ class Matmul(hjx.VJPHiPrimitive):
       )
       # Compute drhs
       drhs = self.config.drhs_config.op(
-          lhs_dq, g, **self.config.drhs_config.kwargs
+          lhs_dq, g, **self.config.drhs_config.kwargs  # pyrefly: ignore [bad-argument-count]
       )
     else:
       # Compute or fetch scale and zero point
