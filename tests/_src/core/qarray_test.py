@@ -521,6 +521,33 @@ class QArrayTest(parameterized.TestCase):
           test_values=[460.0, 465.0],
           expected_scales=[1.0, 2.0],
       ),
+      dict(
+          testcase_name='mxfp4_boundary',
+          qtype='mxfp4',
+          test_values=[
+              6.875,
+              6.90625,
+              6.9375,
+              6.95,
+              6.96875,
+              7.0,
+              7.03125,
+              7.0625,
+          ],
+          expected_scales=[1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0],
+      ),
+      dict(
+          testcase_name='mxfp8_boundary',
+          qtype='mxfp8',
+          test_values=[458.0, 460.0, 462.0, 462.5, 464.0, 466.0, 468.0, 470.0],
+          expected_scales=[1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0],
+      ),
+      dict(
+          testcase_name='mxfp8_16_boundary',
+          qtype='mxfp8_16',
+          test_values=[458.0, 460.0, 462.0, 462.5, 464.0, 466.0, 468.0, 470.0],
+          expected_scales=[1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0],
+      ),
   )
   def test_compute_scale_zero_point_mxfp_oas_bias(
       self, qtype, test_values, expected_scales

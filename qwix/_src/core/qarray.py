@@ -571,8 +571,10 @@ def compute_scale_zero_point(
       # Bias = 0.5 - log2(7/6). C = 2**(bias + 0.5) = 12 / 7.
       c = 12.0 / 7.0
     else:
-      # Bias = 0.5 - log2(31/30). C = 2**(bias + 0.5) = 60 / 31.
-      c = 60.0 / 31.0
+      # In E4M3 OCP, largest normal is 448.0 due to reserved values and
+      # max_cutoff = 464.0 which is 1/2 an ULP larger.
+      # Bias = 0.5 - log2(464.0/448.0). C = 2**(bias + 0.5) = 56 / 29.
+      c = 56.0 / 29.0
     scale_bf16 = (scale * c).astype(jnp.bfloat16)
     scale = (
         (scale_bf16.view(jnp.int16) & 0x7F80)
